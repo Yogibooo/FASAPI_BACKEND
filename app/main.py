@@ -94,10 +94,8 @@ app = FastAPI()
 origins = [
     "http://localhost:5173",      # ローカルのVite
     "http://127.0.0.1:5173",
-    # NetlifyにデプロイしたURLをここに追加:
-    # "https://your-pos-site.netlify.app",
+    "https://squad22.netlify.app",
 ]
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
