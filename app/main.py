@@ -208,7 +208,7 @@ from fastapi import Depends, HTTPException
 
 logger = logging.getLogger(__name__)
 
-SHEETS_WEBHOOK_URL = os.getenv("SHEETS_WEBHOOK_URL", "")
+SHEETS_WEBHOOK_URL = os.getenv("SHEETS_WEBHOOK_URL")
 
 
 
