@@ -203,10 +203,14 @@ def close_order(order_id: str, db=Depends(get_db)):
 
 import requests
 import os
-
-SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbz1aQS6sk1GIN5dCpdbokJ2iJrCrP7iamXeTop1R5-JelfNrHS3INy4cgdlyRmocZx3/exec"
-
+import logging
 from fastapi import Depends, HTTPException
+
+logger = logging.getLogger(__name__)
+
+SHEETS_WEBHOOK_URL = os.getenv("SHEETS_WEBHOOK_URL", "")
+
+
 
 @app.post("/export-to-sheets")
 def export_to_sheets(db=Depends(get_db)):
@@ -216,6 +220,13 @@ def export_to_sheets(db=Depends(get_db)):
       - status = "done"
       - exported = False
     """
+    # 0. まずWebhook URLの確認
+    if not SHEETS_WEBHOOK_URL:
+        raise HTTPException(
+            status_code=500,
+            detail="SHEETS_WEBHOOK_URL が設定されていません。（FastAPI側）",
+        )
+
     # 1. 新規分（未エクスポート & done）のオーダーを取得
     orders = (
         db.query(Order)
@@ -225,25 +236,35 @@ def export_to_sheets(db=Depends(get_db)):
     )
 
     if not orders:
-        return {"status": "ok", "exported": 0}
+        # 新規分が無いのは「正常だけどやることがない」状態
+        return {
+            "status": "ok",
+            "exported": 0,
+            "message": "新規に送信する会計済みオーダーはありませんでした。",
+        }
 
+    # 2. Sheetsに送る行データを組み立て
     rows = []
     for o in orders:
         for it in o.items:
             line_total = it.unit_price * it.quantity
-            rows.append({
-                "timestamp": o.created_at.isoformat(),
-                "ticketNumber": o.ticket_number,
-                "orderId": o.id,
-                "baseName": it.base_name,
-                "toppings": (it.toppings or "").split(",") if it.toppings else [],
-                "quantity": it.quantity,
-                "unitPrice": it.unit_price,
-                "lineTotal": line_total,
-                "status": o.status,
-            })
+            rows.append(
+                {
+                    "timestamp": o.created_at.isoformat(),
+                    "ticketNumber": o.ticket_number,
+                    "orderId": o.id,
+                    "baseName": it.base_name,
+                    "toppings": (it.toppings or "").split(",")
+                    if it.toppings
+                    else [],
+                    "quantity": it.quantity,
+                    "unitPrice": it.unit_price,
+                    "lineTotal": line_total,
+                    "status": o.status,
+                }
+            )
 
-    # 2. Apps Script に POST
+    # 3. Apps ScriptへPOST
     try:
         resp = requests.post(
             SHEETS_WEBHOOK_URL,
@@ -251,14 +272,31 @@ def export_to_sheets(db=Depends(get_db)):
             timeout=20,
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Sheets request error: {e}")
+        logger.exception("SheetsへのPOSTで例外発生")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Sheetsへのリクエストエラー: {e}",
+        )
 
-    if not resp.ok:
-        raise HTTPException(status_code=500, detail=f"Sheets error: {resp.text}")
+    if resp.status_code != 200:
+        # Apps Script側でのエラー内容も見えるようにしておく
+        logger.error(
+            "Sheetsからエラー応答 status=%s body=%s",
+            resp.status_code,
+            resp.text,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Sheets側エラー: {resp.status_code} {resp.text}",
+        )
 
-    # 3. 送信成功したので exported = True に更新
+    # 4. 送信成功したので exported=True に更新
     for o in orders:
         o.exported = True
     db.commit()
 
-    return {"status": "ok", "exported": len(rows)}
+    return {
+        "status": "ok",
+        "exported": len(rows),
+        "message": "Sheetsに送信しました。",
+    }
