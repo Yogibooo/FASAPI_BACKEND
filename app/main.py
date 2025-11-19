@@ -204,7 +204,7 @@ def close_order(order_id: str, db=Depends(get_db)):
 import requests
 import os
 
-SHEETS_WEBHOOK_URL = os.getenv("SHEETS_WEBHOOK_URL", "https://script.google.com/macros/s/AKfycbz1aQS6sk1GIN5dCpdbokJ2iJrCrP7iamXeTop1R5-JelfNrHS3INy4cgdlyRmocZx3/exec") 
+SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbz1aQS6sk1GIN5dCpdbokJ2iJrCrP7iamXeTop1R5-JelfNrHS3INy4cgdlyRmocZx3/exec"
 
 from fastapi import Depends, HTTPException
 
