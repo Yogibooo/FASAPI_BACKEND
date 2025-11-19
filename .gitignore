@@ -1,0 +1,8 @@
+# Python venv
+.venv/
+
+# SQLite local DB
+pos.db
+
+# __pycache__
+__pycache__/
