@@ -15,6 +15,15 @@ from sqlalchemy import (
     Boolean,
 )
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship
+import requests
+import os
+import logging
+from fastapi import Depends, HTTPException
+
+logger = logging.getLogger(__name__)
+
+SHEETS_WEBHOOK_URL = os.getenv("SHEETS_WEBHOOK_URL", "https://script.google.com/macros/s/AKfycbz1aQS6sk1GIN5dCpdbokJ2iJrCrP7iamXeTop1R5-JelfNrHS3INy4cgdlyRmocZx3/exec")
+
 
 # ===== DB設定 =====
 
@@ -200,15 +209,6 @@ def close_order(order_id: str, db=Depends(get_db)):
     db.commit()
     return {"status": "ok"}
 
-
-import requests
-import os
-import logging
-from fastapi import Depends, HTTPException
-
-logger = logging.getLogger(__name__)
-
-SHEETS_WEBHOOK_URL = os.getenv("SHEETS_WEBHOOK_URL")
 
 
 
