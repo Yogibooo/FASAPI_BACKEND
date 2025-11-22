@@ -27,7 +27,7 @@ SHEETS_WEBHOOK_URL = os.getenv("SHEETS_WEBHOOK_URL", "https://script.google.com/
 
 # ===== DB設定 =====
 
-DATABASE_URL = "sqlite:///./pos.db"
+DATABASE_URL = "sqlite:////temp/pos.db"
 
 engine = create_engine(
     DATABASE_URL,
